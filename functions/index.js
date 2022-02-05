@@ -32,7 +32,7 @@ const openai = new OpenAIApi(configuration);
 
 
 
-// STEP 1 - Auth URL
+// Auth URL
 exports.auth = functions.https.onRequest(async (request, response) => {
     const { url, codeVerifier, state } = twitterClient.generateOAuth2AuthLink(
         callbackUrl,
@@ -46,17 +46,23 @@ exports.auth = functions.https.onRequest(async (request, response) => {
 });
 
 
+//Callback url and function for the Auth endpoint
 exports.callback = functions.https.onRequest(async (request, response) => {
+    //store the data from the url. in this case state and code
     const { state, code } = request.query;
 
+    //get an instance of the db doc
     const dbSnapshot = await dbRef.get();
 
+    //store in constant the code verifier and the state to verify it later
     const { codeVerifier, state: storedState } = dbSnapshot.data();
 
+    //verify the state, if its not the same as in the db, it will return an error
     if (state !== storedState) {
         return response.status(400).send("Stored tokens do not match");
     }
 
+    //if its the same, it will log in with OAuth2.0
     const {
         client: loggedClient,
         accessToken,
@@ -67,32 +73,44 @@ exports.callback = functions.https.onRequest(async (request, response) => {
         redirectUri: callbackUrl,
     });
 
+    //update the database
     await dbRef.set({ accessToken, refreshToken });
 
+    //response 200 to tell you everything is ok :)
     response.sendStatus(200);
 
 });
 
+
+//Tweet function API
 exports.tweet = functions.https.onRequest(async (request, response) => {
+
+    //The refresh token is for offline or sleeping user. 
     const { refreshToken } = (await dbRef.get()).data();
 
+    //update the client with new refresh token, which changes every certain amount of time. OAuth2.0 stuff
     const {
         client: refreshedClient,
         accessToken,
         refreshToken: newRefreshToken,
     } = await twitterClient.refreshOAuth2Token(refreshToken);
 
+    //update database with new token
     await dbRef.set({ accessToken, refreshToken: newRefreshToken });
 
+    //prompt the AI openAi to tweet something and store it in newTweet
     const newTweet = await openai.createCompletion('text-davinci-001', {
         prompt: 'tweet something about #ducks',
         max_tokens: 64,
     })
 
+
+    //Calls the twitter api to tweet the tweet.
     const { data } = await refreshedClient.v2.tweet(
         newTweet.data.choices[0].text
     )
 
+    //respond the data of the tweet and user.
     response.send(data);
 
 

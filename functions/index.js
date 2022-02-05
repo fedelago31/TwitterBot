@@ -1,7 +1,7 @@
 const functions = require("firebase-functions");
 require('dotenv').config();
 
-//initialize app
+//initialize app in firebase
 const admin = require('firebase-admin')
 admin.initializeApp();
 
@@ -13,10 +13,8 @@ const TwitterApi = require('twitter-api-v2').default;
 
 //instantiate using the Client Id for the OAuth 2.0
 const twitterClient = new TwitterApi({
-    clientId: 'c1BWNzh1YmduYW1lZDR6azMySzU6MTpjaQ',
-    clientSecret: 'ulOfTfq5BkIgiTZ4uD55NhATUc6MPxrEq25QbI2diujkFTkw83'
-    // clientId: process.env.CLIENT_ID,
-    // clientSecret: process.env.CLIENT_SECRET
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET
 });
 
 const callbackUrl = 'http://127.0.0.1:5000/tweet-bot-9b6f3/us-central1/callback'
@@ -26,8 +24,8 @@ const callbackUrl = 'http://127.0.0.1:5000/tweet-bot-9b6f3/us-central1/callback'
 
 const { Configuration, OpenAIApi } = require('openai');
 const configuration = new Configuration({
-    organization: 'org-WbCZY2VQzvINioIUwv452CjV',
-    apiKey: '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'
+    organization: process.env.OPEN_AI_ORG,
+    apiKey: process.env.OPEN_AI_KEY
 });
 const openai = new OpenAIApi(configuration);
 
